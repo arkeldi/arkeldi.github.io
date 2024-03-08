@@ -20,7 +20,8 @@
 
 <script type="text/javascript">
     let classifier;
-    let imageModelURL = './my_model/';
+    // The path should be relative to the root of the server or the project directory
+    let imageModelURL = 'tm-my-image-model/model.json';
 
     let video;
     let flippedVideo;
@@ -32,7 +33,7 @@
     let confidenceThreshold = 0.2; // Default confidence threshold
 
     function preload() {
-        classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+        classifier = ml5.imageClassifier(imageModelURL);
     }
 
     function setup() {

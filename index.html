@@ -1,73 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Image Classifier with p5.js</title>
+    <meta charset="UTF-8">
+    <title>Interactive ML Interface with p5.js and ml5.js</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/addons/p5.dom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml5@latest/dist/ml5.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+    </style>
 </head>
 <body>
-    <div>Teachable Machine Image Model - p5.js and ml5.js</div>
-    <script type="text/javascript">
-        // Classifier Variable
-        let classifier;
-        // Model URL
-        let imageModelURL = './my_model/';
-        
-        // Video
-        let video;
-        let flippedVideo;
-        // To store the classification
-        let label = "";
 
-        // Load the model first
-        function preload() {
-            classifier = ml5.imageClassifier(imageModelURL + 'model.json');
-        }
+<script type="text/javascript">
+    let classifier;
+    let imageModelURL = './my_model/';
 
-        function setup() {
-            createCanvas(320, 260);
-            // Create the video
-            video = createCapture(VIDEO);
-            video.size(320, 240);
-            video.hide();
+    let video;
+    let flippedVideo;
+    let label = "";
 
+    let videoPlaying = false;
+    let toggleVideoBtn;
+    let confidenceThresholdSlider;
+    let confidenceThreshold = 0.2; // Default confidence threshold
+
+    function preload() {
+        classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+    }
+
+    function setup() {
+        createCanvas(320, 260);
+
+        video = createCapture(VIDEO);
+        video.size(320, 240);
+        video.hide();
+
+        // Button to toggle video feed
+        toggleVideoBtn = createButton('Toggle Video');
+        toggleVideoBtn.mousePressed(toggleVideo);
+
+        // Slider to adjust confidence threshold
+        createP('Confidence Threshold');
+        confidenceThresholdSlider = createSlider(0, 1, 0.2, 0.01);
+        confidenceThresholdSlider.input(updateThreshold);
+
+        classifyVideo();
+    }
+
+    function draw() {
+        background(0);
+
+        if (videoPlaying) {
             flippedVideo = ml5.flipImage(video);
-            // Start classifying
-            classifyVideo();
-        }
-
-        function draw() {
-            background(0);
-            // Draw the video
             image(flippedVideo, 0, 0);
-
-            // Draw the label
-            fill(255);
-            textSize(16);
-            textAlign(CENTER);
-            text(label, width / 2, height - 4);
-        }
-
-        // Get a prediction for the current video frame
-        function classifyVideo() {
-            flippedVideo = ml5.flipImage(video);
-            classifier.classify(flippedVideo, gotResult);
-            // Remove the flipped video to prevent memory leaks
             flippedVideo.remove();
         }
 
-        // When we get a result
-        function gotResult(error, results) {
-            // If there is an error
-            if (error) {
-                console.error(error);
-                return;
-            }
-            // The results are in an array ordered by confidence.
-            label = results[0].label;
-            // Classify again!
-            classifyVideo();
+        fill(255);
+        textSize(16);
+        textAlign(CENTER);
+        text(label, width / 2, height - 4);
+    }
+
+    function classifyVideo() {
+        if (videoPlaying) {
+            flippedVideo = ml5.flipImage(video);
+            classifier.classify(flippedVideo, gotResult);
+            flippedVideo.remove();
+        } else {
+            setTimeout(classifyVideo, 500); // Retry in a bit if video is stopped
         }
-    </script>
+    }
+
+    function gotResult(error, results) {
+        if (error) {
+            console.error(error);
+            return;
+        }
+        if (results[0].confidence > confidenceThreshold) {
+            label = `${results[0].label} (${(results[0].confidence * 100).toFixed(2)}%)`;
+        }
+        classifyVideo();
+    }
+
+    function toggleVideo() {
+        videoPlaying = !videoPlaying;
+        if (videoPlaying) {
+            video.loop();
+            toggleVideoBtn.html('Stop Video');
+        } else {
+            video.stop();
+            toggleVideoBtn.html('Start Video');
+        }
+    }
+
+    function updateThreshold() {
+        confidenceThreshold = confidenceThresholdSlider.value();
+    }
+</script>
+
 </body>
 </html>
